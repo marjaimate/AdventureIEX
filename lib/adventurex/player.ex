@@ -20,6 +20,10 @@ defmodule Adventurex.Player do
   def stamina(pid, change), do: GenServer.cast({:global, pid}, {:put, :stamina, change})
   def luck(pid, change), do: GenServer.cast({:global, pid}, {:put, :luck, change})
 
+  def add_equipment(pid, equipment), do: GenServer.cast({:global, pid}, {:add_equipment, equipment})
+  def add_potion(pid, potion), do: GenServer.cast({:global, pid}, {:add_potion, potion})
+  def add_jewel(pid, jewel), do: GenServer.cast({:global, pid}, {:add_jewel, jewel})
+
   # Restore your stamina by eating provisions
   # each provision restore 4 stamina points
   def eat(pid), do: GenServer.call({:global, pid}, :eat)
@@ -40,10 +44,10 @@ defmodule Adventurex.Player do
       :skill => Dice.roll + 6,
       :stamina => Dice.roll + Dice.roll + 12,
       :luck => Dice.roll + 6,
-      :equipment => %{},
-      :potions => %{},
+      :equipment => [],
+      :potions => [],
       :provisions => 10,
-      :jewels => %{},
+      :jewels => [],
       :gold => 0,
     }}
   end
@@ -62,6 +66,15 @@ defmodule Adventurex.Player do
 
   def handle_cast({:put, attribute, change}, state) do
     {:noreply, Map.update!(state, attribute, &(&1 + change))}
+  end
+  def handle_cast({:add_equipment, equipment}, state) do
+    {:noreply, Map.update!(state, :equipment, &(&1 ++ [equipment]))}
+  end
+  def handle_cast({:add_potion, potion}, state) do
+    {:noreply, Map.update!(state, :potion, &(&1 ++ [potion]))}
+  end
+  def handle_cast({:add_jewel, jewel}, state) do
+    {:noreply, Map.update!(state, :jewel, &(&1 ++ [jewel]))}
   end
 
   ###### HELPERS ######
