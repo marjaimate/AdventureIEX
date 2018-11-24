@@ -33,8 +33,6 @@ defmodule Adventurex.Player do
       lucky?(luck_score, Dice.roll + Dice.roll)
     end
   end
-  defp lucky?(player_luck, luck_score) when player_luck >= luck_score, do: :lucky
-  defp lucky?(_, _), do: :unlucky
 
   def init(name) do
     {:ok, %{
@@ -67,4 +65,6 @@ defmodule Adventurex.Player do
   end
 
   ###### HELPERS ######
+  defp lucky?(player_luck, luck_score) when player_luck >= luck_score, do: :lucky
+  defp lucky?(_, _), do: :unlucky
 end

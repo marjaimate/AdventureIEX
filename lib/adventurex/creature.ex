@@ -8,6 +8,7 @@ defmodule Adventurex.Creature do
     GenServer.start_link(__MODULE__, %{attributes | name: name}, name: {:global, name})
   end
 
+  def name(pid), do: GenServer.call({:global, pid}, {:get, :name})
   def skill(pid), do: GenServer.call({:global, pid}, {:get, :skill})
   def stamina(pid), do: GenServer.call({:global, pid}, {:get, :stamina})
 

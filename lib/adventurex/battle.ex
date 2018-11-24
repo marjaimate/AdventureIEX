@@ -16,13 +16,21 @@ defmodule Adventurex.Battle do
   alias Adventurex.Player
   alias Adventurex.Creature
 
+  # Public functions
+  # initiate the battle with a creature
   def start_link(player, creature) do
     GenStateMachine.start(__MODULE__, {:fight, {creature, :start}})
   end
 
+  # do the next round of the battle
+  def next_round(battle, player), do: GenStateMachine.call(battle, {player, :round})
+  def test_luck(battle, player), do: GenStateMachine.call(battle, {player, :luck})
+  def escape(battle, player), do: GenStateMachine.call(battle, {player, :escape})
+  def over(battle), do: GenStateMachine.cast(battle, :shutdown)
+
   ## States and transitions
-  # fight x attack
-  def fight({:call, from}, {player, :attack}, {creature, _}) do
+  # fight x round
+  def fight({:call, from}, {player, :round}, {creature, _}) do
     with player_attack_strength <- Dice.roll + Dice.roll + Player.skill(player),
          creature_attack_strength <- Dice.roll + Dice.roll + Creature.skill(creature)
     do
@@ -41,8 +49,8 @@ defmodule Adventurex.Battle do
           {player, creature}
       end
     end
-
-    {:next_state, :fight, {creature1, result}, {:reply, from, player1}}
+    next = fight_over?(player, creature)
+    {:next_state, next, {creature1, result}, {:reply, from, next}}
   end
 
   # fight x luck
@@ -56,7 +64,8 @@ defmodule Adventurex.Battle do
         IO.puts("A mere gaze on the creature. restored 1 stamina point")
         Creature.stamina(player, 1)
     end
-    {:next_state, :fight, {creature1, :player_won_round}, {:reply, from, player}}
+    next = fight_over?(player, creature)
+    {:next_state, next, {creature1, :player_won_round}, {:reply, from, next}}
   end
   def fight({:call, from}, {player, :luck}, {creature, :creature_won_round}) do
     player1 = case Player.test_your_luck(player) do
@@ -67,13 +76,22 @@ defmodule Adventurex.Battle do
         IO.puts("Serious damage to you! -1 stamina points")
         Creature.stamina(player, -1)
     end
-    {:next_state, :fight, {creature1, :player_won_round}, {:reply, from, player}}
+    next = fight_over?(player, creature)
+    {:next_state, next, {creature1, :player_won_round}, {:reply, from, next}}
   end
 
   # fight x escape
   def fight({:call, from}, {player, :escape}, {creature, _}) do
     # Automatic wound from creature - "the price of cowardice"
-    {:next_state, :over, {creature, :escaped}, {:reply, from, Player.stamina(player, -2)}}
+    Player.stamina(player, -2)
+    {:next_state, :player_escaped, creature, {:reply, from, :escaped}}
+  end
+
+  def handle_event({:call, from}, event, _state, data) do
+    {:keep_state_and_data, [{:reply, from, data}]}
+  end
+  def handle_event(:cast, :shutdown, _, data) do
+    {:stop, :normal, data}
   end
 
   # See who won based on the attack strength values
@@ -82,4 +100,30 @@ defmodule Adventurex.Battle do
   end
   defp compare(strength, strength), do: :blow_avoided # Tie
   defp compare(_, _), do: :creature_won_round
+
+  # Check if we have the fight over already?
+  # if the player stamina is below 0 -> creature won
+  # if the creature stamina is below 0 -> player won
+  # else -> fight is still ongoing
+  defp fight_over?(player, creature) do
+    with player_stamina <- Player.stamina(player),
+         creature_stamina < Creature.stamina(creature)
+    do
+      compare_stamina(player_stamina, creature_stamina)
+    end
+  end
+
+  defp compare_stamina(player_stamina, creature_stamina) when player_stamina <= 0 do
+    :creature_won
+  end
+  defp compare_stamina(player_stamina, creature_stamina) when creature_stamina <= 0 do
+    :player_won
+  end
+  defp compare_stamina(_, _) do
+    :fight
+  end
+
+  def terminate(:normal, _, creature) do
+    IO.puts "Battle with #{Creature.name(creature)} finished"
+  end
 end
