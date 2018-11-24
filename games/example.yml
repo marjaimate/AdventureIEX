@@ -1,0 +1,23 @@
+title: Warlock of BEAMtop Mountain
+subtitle: Inspired by Warlock of Firetop Mountain
+stages:
+  1:
+    description: You are in some place and have the following choices...
+    art: scene_1.txt #location of ascii art to be rendered
+    options:
+      - stage: 71
+        action: Go to orc
+      - stage: 231
+        action: go west
+  71:
+    description: you encountern an orc
+    options:
+      - stage: 231 # deducts 2 stamina points
+        action: escape
+      - stage: 23 # deducts 2 stamina points
+        action: won the battle
+    creatures:
+      - name: ""
+        type: orc
+        skill: 12
+        stamina: 7
